@@ -1,48 +1,43 @@
 import { Suspense } from 'react'
-import AuditResults from '@/components/AuditResults'
+import CrawlResults from '@/components/CrawlResults'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Audit Results | Website Health Checker',
+  title: 'Site Audit | Website Health Checker',
 }
 
-export default function ResultsPage() {
+function ResultsLoader({ url }: { url: string }) {
+  return <CrawlResults url={url} />
+}
+
+function MissingUrl() {
   return (
-    <main className="min-h-screen bg-v-dark">
-      {/* Nav */}
-      <nav className="border-b border-white/5 bg-v-dark2 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/" className="font-heading font-bold text-white hover:text-v-pink transition-colors">
-            Website Health Checker
-          </a>
-          <a href="https://versantus.co.uk" target="_blank" rel="noopener noreferrer"
-            className="text-xs text-gray-500 hover:text-v-pink transition-colors">
-            by Versantus →
-          </a>
-        </div>
-      </nav>
-
-      <div className="max-w-2xl mx-auto px-6 py-10">
-        <Suspense fallback={
-          <div className="text-center py-20">
-            <div className="w-10 h-10 border-2 border-v-pink border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-400 text-sm">Loading…</p>
-          </div>
-        }>
-          <AuditResults />
-        </Suspense>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-md w-full text-center">
+        <p className="text-gray-600 mb-4">No URL provided.</p>
+        <a href="/" className="inline-block bg-gradient-to-r from-[#F0146E] to-[#A445B2] text-white rounded-xl px-6 py-3 text-sm font-semibold">
+          Start a new audit
+        </a>
       </div>
+    </div>
+  )
+}
 
-      <footer className="border-t border-white/5 py-6 px-6 text-center mt-10">
-        <p className="text-gray-600 text-xs">
-          Built by{' '}
-          <a href="https://versantus.co.uk" target="_blank" rel="noopener noreferrer"
-            className="text-gray-500 hover:text-v-pink transition-colors">
-            Versantus
-          </a>
-          {' '}— Oxford&apos;s Drupal &amp; digital agency
-        </p>
-      </footer>
-    </main>
+export default function ResultsPage({
+  searchParams,
+}: {
+  searchParams: { url?: string }
+}) {
+  const url = searchParams.url
+  if (!url) return <MissingUrl />
+
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#F0146E] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ResultsLoader url={url} />
+    </Suspense>
   )
 }

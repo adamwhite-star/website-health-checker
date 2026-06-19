@@ -2,10 +2,14 @@
 
 interface Props {
   score: number
+  size?: 'md' | 'lg'
+  theme?: 'dark' | 'light'
 }
 
-export default function ScoreGauge({ score }: Props) {
-  const radius = 54
+export default function ScoreGauge({ score, size = 'md', theme = 'dark' }: Props) {
+  const dim = size === 'lg' ? 160 : 140
+  const cx = dim / 2
+  const radius = size === 'lg' ? 62 : 54
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
 
@@ -19,32 +23,37 @@ export default function ScoreGauge({ score }: Props) {
     score >= 40 ? 'Needs work' :
     'Poor'
 
+  const trackColor = theme === 'light' ? '#e5e7eb' : '#1a1a2e'
+  const scoreColor = theme === 'light' ? '#111827' : 'white'
+  const subColor = theme === 'light' ? '#6b7280' : '#888'
+  const fontSize = size === 'lg' ? 32 : 28
+
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg width="140" height="140" viewBox="0 0 140 140">
+      <svg width={dim} height={dim} viewBox={`0 0 ${dim} ${dim}`}>
         <circle
-          cx="70" cy="70" r={radius}
+          cx={cx} cy={cx} r={radius}
           fill="none"
-          stroke="#1a1a2e"
+          stroke={trackColor}
           strokeWidth="12"
         />
         <circle
-          cx="70" cy="70" r={radius}
+          cx={cx} cy={cx} r={radius}
           fill="none"
           stroke={color}
           strokeWidth="12"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          transform="rotate(-90 70 70)"
+          transform={`rotate(-90 ${cx} ${cx})`}
           style={{ transition: 'stroke-dashoffset 0.8s ease' }}
         />
-        <text x="70" y="66" textAnchor="middle" dominantBaseline="middle"
-          fill="white" fontSize="28" fontWeight="700" fontFamily="sans-serif">
+        <text x={cx} y={cx - 8} textAnchor="middle" dominantBaseline="middle"
+          fill={scoreColor} fontSize={fontSize} fontWeight="700" fontFamily="sans-serif">
           {score}
         </text>
-        <text x="70" y="86" textAnchor="middle" dominantBaseline="middle"
-          fill="#888" fontSize="11" fontFamily="sans-serif">
+        <text x={cx} y={cx + 14} textAnchor="middle" dominantBaseline="middle"
+          fill={subColor} fontSize="11" fontFamily="sans-serif">
           / 100
         </text>
       </svg>

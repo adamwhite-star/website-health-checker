@@ -8,6 +8,9 @@ const WEIGHTS: Record<string, { pass: number; warn: number; fail: number }> = {
   'viewport':         { pass: 10, warn: 5,  fail: 0 },
   'canonical':        { pass: 10, warn: 5,  fail: 0 },
   'schema':           { pass: 10, warn: 5,  fail: 0 },
+  'open-graph':       { pass: 10, warn: 5,  fail: 0 },
+  'word-count':       { pass: 10, warn: 5,  fail: 0 },
+  'image-alt':        { pass: 10, warn: 5,  fail: 0 },
 }
 
 export function calculateScore(checks: CheckResult[]): number {

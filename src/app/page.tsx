@@ -8,6 +8,9 @@ const checks = [
   { icon: '🔗', label: 'Canonical tag', desc: 'Duplicate content' },
   { icon: '🔒', label: 'HTTPS', desc: 'Security check' },
   { icon: '📊', label: 'Structured data', desc: 'Schema / JSON-LD' },
+  { icon: '🌐', label: 'Open Graph', desc: 'Social sharing tags' },
+  { icon: '📖', label: 'Content length', desc: 'Thin content check' },
+  { icon: '🖼️', label: 'Image alt text', desc: 'Accessibility & SEO' },
 ]
 
 export default function Home() {
@@ -35,7 +38,7 @@ export default function Home() {
 
           <p className="text-gray-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
             Enter any URL for a free instant SEO health check.
-            We&apos;ll scan 7 critical signals and tell you exactly what to fix.
+            We&apos;ll crawl your entire site and audit 10 SEO signals across every page.
           </p>
 
           <div className="flex justify-center">
@@ -51,7 +54,7 @@ export default function Home() {
             What we check
           </h2>
           <p className="text-gray-400 text-center text-sm mb-10">
-            7 checks that cover the fundamentals every page needs to rank
+            10 checks across every page — title tags to structured data
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {checks.map(c => (
@@ -63,9 +66,9 @@ export default function Home() {
               </div>
             ))}
             <div className="rounded-xl border border-v-pink/20 bg-v-pink/5 p-4 flex flex-col gap-1">
-              <span className="text-2xl">🚀</span>
-              <span className="text-v-pink text-sm font-semibold">More coming</span>
-              <span className="text-gray-500 text-xs">Speed, images &amp; more</span>
+              <span className="text-2xl">🔍</span>
+              <span className="text-v-pink text-sm font-semibold">Full site crawl</span>
+              <span className="text-gray-500 text-xs">Up to 50 pages</span>
             </div>
           </div>
         </div>
