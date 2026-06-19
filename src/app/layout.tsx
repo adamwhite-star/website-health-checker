@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Outfit, Open_Sans } from 'next/font/google'
+import Providers from '@/components/Providers'
 import './globals.css'
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
@@ -17,9 +18,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${outfit.variable} ${openSans.variable}`}>
-      <body className="bg-v-dark font-body antialiased text-gray-100 min-h-screen">
-        {children}
+    <html lang="en" className={`${outfit.variable} ${openSans.variable}`} suppressHydrationWarning>
+      <body className="font-body min-h-screen">
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

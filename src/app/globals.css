@@ -4,4 +4,32 @@
 
 @layer base {
   html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-white dark:bg-v-dark text-gray-900 dark:text-gray-100 antialiased;
+  }
+}
+
+/* Dot grid overlay for dark hero */
+.dot-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Shimmer sweep for progress bar */
+@keyframes shimmer {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(150%); }
+}
+.animate-shimmer {
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Fade-in for streamed page rows */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out forwards;
 }
