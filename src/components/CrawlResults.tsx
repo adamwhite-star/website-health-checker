@@ -16,8 +16,7 @@ export default function CrawlResults({ url }: { url: string }) {
   const [phase, setPhase] = useState<Phase>({ type: 'discovering' })
   const [pages, setPages] = useState<PageAuditResult[]>([])
   const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null)
-  const [exporting, setExporting] = useState<'idle' | 'loading' | 'done' | 'error' | 'unconfigured'>('idle')
-  const [sheetUrl, setSheetUrl] = useState<string | null>(null)
+  const [exporting, setExporting] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const abortRef = useRef<AbortController | null>(null)
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDone = useRef(false)
@@ -83,13 +82,16 @@ export default function CrawlResults({ url }: { url: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pages, analysis, siteUrl: url }),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        if (res.status === 503) { setExporting('unconfigured'); return }
-        setExporting('error')
-        return
-      }
-      setSheetUrl(data.url)
+      if (!res.ok) { setExporting('error'); return }
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const match = disposition.match(/filename="([^"]+)"/)
+      const filename = match?.[1] ?? 'seo-audit.csv'
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(a.href)
       setExporting('done')
     } catch {
       setExporting('error')
@@ -203,52 +205,44 @@ export default function CrawlResults({ url }: { url: string }) {
         {phase.type === 'done' && analysis && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row items-center gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 48 48" fill="none">
-                <rect width="48" height="48" rx="8" fill="#0F9D58"/>
-                <path d="M14 12h14l8 8v20a2 2 0 01-2 2H14a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fillOpacity=".2"/>
-                <path d="M28 12l8 8h-8V12z" fill="white" fillOpacity=".4"/>
-                <rect x="16" y="26" width="16" height="1.5" rx=".75" fill="white"/>
-                <rect x="16" y="30" width="16" height="1.5" rx=".75" fill="white"/>
-                <rect x="16" y="22" width="16" height="1.5" rx=".75" fill="white"/>
-              </svg>
+              <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
               <div>
-                <p className="font-semibold text-gray-800 text-sm">Export to Google Sheets</p>
-                <p className="text-gray-400 text-xs">One tab per issue type — ready to share with a client</p>
+                <p className="font-semibold text-gray-800 text-sm">Download as CSV</p>
+                <p className="text-gray-400 text-xs">All pages + issues — opens in Excel or Google Sheets</p>
               </div>
             </div>
 
             {exporting === 'idle' && (
               <button
                 onClick={exportToSheets}
-                className="flex-shrink-0 bg-[#0F9D58] text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-[#0b8a4b] transition-colors"
+                className="flex-shrink-0 bg-emerald-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors"
               >
-                Create Sheet
+                Download CSV
               </button>
             )}
             {exporting === 'loading' && (
               <div className="flex-shrink-0 flex items-center gap-2 text-sm text-gray-500">
-                <svg className="w-4 h-4 animate-spin text-[#0F9D58]" fill="none" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 animate-spin text-emerald-600" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
                   <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-80"/>
                 </svg>
-                Creating…
+                Preparing…
               </div>
             )}
-            {exporting === 'done' && sheetUrl && (
-              <a
-                href={sheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 bg-[#0F9D58] text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-[#0b8a4b] transition-colors flex items-center gap-1.5"
+            {exporting === 'done' && (
+              <button
+                onClick={exportToSheets}
+                className="flex-shrink-0 bg-emerald-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors"
               >
-                Open Sheet ↗
-              </a>
+                Download again
+              </button>
             )}
             {exporting === 'error' && (
               <span className="flex-shrink-0 text-sm text-red-500">Failed — try again</span>
-            )}
-            {exporting === 'unconfigured' && (
-              <span className="flex-shrink-0 text-xs text-gray-400 max-w-[200px] text-right">Add <code className="font-mono bg-gray-100 px-1 rounded">GOOGLE_SERVICE_ACCOUNT_*</code> env vars to enable</span>
             )}
           </div>
         )}
