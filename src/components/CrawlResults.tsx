@@ -16,13 +16,18 @@ export default function CrawlResults({ url }: { url: string }) {
   const [phase, setPhase] = useState<Phase>({ type: 'discovering' })
   const [pages, setPages] = useState<PageAuditResult[]>([])
   const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null)
+  const [exporting, setExporting] = useState<'idle' | 'loading' | 'done' | 'error' | 'unconfigured'>('idle')
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isDone = useRef(false)
 
   const displayUrl = url.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
   useEffect(() => {
     const controller = new AbortController()
     abortRef.current = controller
+    isDone.current = false
 
     const encoded = encodeURIComponent(url)
     const es = new EventSource(`/api/crawl?url=${encoded}`)
@@ -34,33 +39,62 @@ export default function CrawlResults({ url }: { url: string }) {
         setPhase({ type: 'discovering' })
       } else if (event.type === 'discovered') {
         setPhase({ type: 'discovered', total: event.total })
-        setTimeout(() => setPhase({ type: 'auditing', done: 0, total: event.total }), 400)
+        transitionTimer.current = setTimeout(() => {
+          setPhase({ type: 'auditing', done: 0, total: event.total })
+        }, 400)
       } else if (event.type === 'page') {
+        if (transitionTimer.current) { clearTimeout(transitionTimer.current); transitionTimer.current = null }
         setPages(p => [...p, event.result])
         setPhase({ type: 'auditing', done: event.index, total: event.total })
       } else if (event.type === 'analysis') {
+        if (transitionTimer.current) { clearTimeout(transitionTimer.current); transitionTimer.current = null }
+        isDone.current = true
         setAnalysis(event.analysis)
         setPhase({ type: 'done' })
         es.close()
       } else if (event.type === 'error') {
+        isDone.current = true
         setPhase({ type: 'error', message: event.message })
         es.close()
       }
     }
 
     es.onerror = () => {
-      if (phase.type !== 'done') {
+      if (!isDone.current) {
         setPhase({ type: 'error', message: 'Connection lost. Please try again.' })
       }
       es.close()
     }
 
     return () => {
+      if (transitionTimer.current) clearTimeout(transitionTimer.current)
       es.close()
       controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url])
+
+  async function exportToSheets() {
+    if (!analysis) return
+    setExporting('loading')
+    try {
+      const res = await fetch('/api/export-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pages, analysis, siteUrl: url }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 503) { setExporting('unconfigured'); return }
+        setExporting('error')
+        return
+      }
+      setSheetUrl(data.url)
+      setExporting('done')
+    } catch {
+      setExporting('error')
+    }
+  }
 
   if (phase.type === 'error') {
     return (
@@ -164,6 +198,60 @@ export default function CrawlResults({ url }: { url: string }) {
 
         {/* Page table — show as soon as we have pages */}
         {pages.length > 0 && <PageTable pages={pages} />}
+
+        {/* Export to Google Sheets */}
+        {phase.type === 'done' && analysis && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 48 48" fill="none">
+                <rect width="48" height="48" rx="8" fill="#0F9D58"/>
+                <path d="M14 12h14l8 8v20a2 2 0 01-2 2H14a2 2 0 01-2-2V14a2 2 0 012-2z" fill="white" fillOpacity=".2"/>
+                <path d="M28 12l8 8h-8V12z" fill="white" fillOpacity=".4"/>
+                <rect x="16" y="26" width="16" height="1.5" rx=".75" fill="white"/>
+                <rect x="16" y="30" width="16" height="1.5" rx=".75" fill="white"/>
+                <rect x="16" y="22" width="16" height="1.5" rx=".75" fill="white"/>
+              </svg>
+              <div>
+                <p className="font-semibold text-gray-800 text-sm">Export to Google Sheets</p>
+                <p className="text-gray-400 text-xs">One tab per issue type — ready to share with a client</p>
+              </div>
+            </div>
+
+            {exporting === 'idle' && (
+              <button
+                onClick={exportToSheets}
+                className="flex-shrink-0 bg-[#0F9D58] text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-[#0b8a4b] transition-colors"
+              >
+                Create Sheet
+              </button>
+            )}
+            {exporting === 'loading' && (
+              <div className="flex-shrink-0 flex items-center gap-2 text-sm text-gray-500">
+                <svg className="w-4 h-4 animate-spin text-[#0F9D58]" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                  <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-80"/>
+                </svg>
+                Creating…
+              </div>
+            )}
+            {exporting === 'done' && sheetUrl && (
+              <a
+                href={sheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 bg-[#0F9D58] text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-[#0b8a4b] transition-colors flex items-center gap-1.5"
+              >
+                Open Sheet ↗
+              </a>
+            )}
+            {exporting === 'error' && (
+              <span className="flex-shrink-0 text-sm text-red-500">Failed — try again</span>
+            )}
+            {exporting === 'unconfigured' && (
+              <span className="flex-shrink-0 text-xs text-gray-400 max-w-[200px] text-right">Add <code className="font-mono bg-gray-100 px-1 rounded">GOOGLE_SERVICE_ACCOUNT_*</code> env vars to enable</span>
+            )}
+          </div>
+        )}
 
         {/* CTA */}
         {phase.type === 'done' && (

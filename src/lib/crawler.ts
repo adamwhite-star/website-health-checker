@@ -1,7 +1,7 @@
 import { load } from 'cheerio/slim'
 import type { PageType } from './types'
 
-const MAX_PAGES = 50
+const MAX_PAGES = 500
 const FETCH_TIMEOUT = 8000
 const USER_AGENT = 'Mozilla/5.0 (compatible; VersantusHealthChecker/2.0; +https://versantus.co.uk)'
 

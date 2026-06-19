@@ -8,9 +8,20 @@ import type { CrawlEvent, PageAuditResult } from '@/lib/types'
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
+const CONCURRENCY = 5
+
 function send(controller: ReadableStreamDefaultController, event: CrawlEvent) {
   const line = `data: ${JSON.stringify(event)}\n\n`
   controller.enqueue(new TextEncoder().encode(line))
+}
+
+async function auditPage(url: string): Promise<PageAuditResult | null> {
+  const html = await fetchHtml(url)
+  if (!html) return null
+  const checks = runChecks(html, url)
+  const score = calculateScore(checks)
+  const pageType = detectPageType(url)
+  return { url, pageType, score, checks }
 }
 
 export async function GET(req: NextRequest) {
@@ -44,21 +55,25 @@ export async function GET(req: NextRequest) {
         send(controller, { type: 'discovered', total: urls.length, urls })
 
         const results: PageAuditResult[] = []
+        let completed = 0
 
-        for (let i = 0; i < urls.length; i++) {
-          const url = urls[i]
-          const html = await fetchHtml(url)
+        // Process URLs in concurrent batches
+        for (let i = 0; i < urls.length; i += CONCURRENCY) {
+          const batch = urls.slice(i, i + CONCURRENCY)
+          const settled = await Promise.allSettled(batch.map(auditPage))
 
-          if (!html) continue
-
-          const checks = runChecks(html, url)
-          const score = calculateScore(checks)
-          const pageType = detectPageType(url)
-
-          const result: PageAuditResult = { url, pageType, score, checks }
-          results.push(result)
-
-          send(controller, { type: 'page', result, index: i + 1, total: urls.length })
+          for (const outcome of settled) {
+            completed++
+            if (outcome.status === 'fulfilled' && outcome.value) {
+              results.push(outcome.value)
+              send(controller, {
+                type: 'page',
+                result: outcome.value,
+                index: completed,
+                total: urls.length,
+              })
+            }
+          }
         }
 
         const analysis = analyseSite(results)
